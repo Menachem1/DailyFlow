@@ -41,8 +41,21 @@ export function useOneTimeTasks() {
     if (t) { Object.assign(t, fields); save(tasks.value) }
   }
 
+  // Reorder a subset of tasks (e.g. only repeating or only open) within the full array,
+  // keeping non-subset tasks at their original positions.
+  function setSubsetOrder(newOrderIds) {
+    const subsetSet = new Set(newOrderIds)
+    const positions = []
+    tasks.value.forEach((t, i) => { if (subsetSet.has(t.id)) positions.push(i) })
+    const idToTask = new Map(tasks.value.map(t => [t.id, t]))
+    const newArr = [...tasks.value]
+    newOrderIds.forEach((id, i) => { newArr[positions[i]] = idToTask.get(id) })
+    tasks.value = newArr
+    save(tasks.value)
+  }
+
   const open = () => tasks.value.filter(t => !t.completed)
   const done = () => tasks.value.filter(t => t.completed)
 
-  return { tasks, addTask, removeTask, toggleCompletion, updateTask, open, done }
+  return { tasks, addTask, removeTask, toggleCompletion, updateTask, setSubsetOrder, open, done }
 }

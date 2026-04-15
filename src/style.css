@@ -953,6 +953,28 @@ body {
 }
 .install-dismiss:hover { background: rgba(255,255,255,0.35); }
 
+/* ===== Drag & Drop ===== */
+.drag-handle {
+  cursor: grab;
+  color: var(--text-soft);
+  display: flex;
+  align-items: center;
+  padding: 0 4px 0 0;
+  flex-shrink: 0;
+  opacity: 0.4;
+  transition: opacity 0.15s;
+  touch-action: none;
+}
+.drag-handle:hover  { opacity: 0.9; color: var(--text-muted); }
+.drag-handle:active { cursor: grabbing; opacity: 1; }
+
+.drag-ghost {
+  opacity: 0.35 !important;
+  background: var(--primary-light) !important;
+  border-color: var(--primary) !important;
+  border-radius: var(--radius) !important;
+}
+
 /* ===== Category Badge ===== */
 .category-badge {
   display: inline-block;

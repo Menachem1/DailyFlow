@@ -41,6 +41,11 @@ export function useRecurringTasks() {
     if (t) { t.title = title; t.days = days; t.time = time; t.categoryId = categoryId; save(tasks.value) }
   }
 
+  function setTasksOrder(newArr) {
+    tasks.value = newArr
+    save(tasks.value)
+  }
+
   function tasksForDate(date) {
     const dow = date.getDay()
     const dateKey = date.toISOString().slice(0, 10)
@@ -94,5 +99,5 @@ export function useRecurringTasks() {
     return result
   }
 
-  return { tasks, addTask, removeTask, updateTask, tasksForDate, isCompletedOn, toggleCompletionOn, isCompleted, toggleCompletion, getCompletionRate, getHistory }
+  return { tasks, addTask, removeTask, updateTask, setTasksOrder, tasksForDate, isCompletedOn, toggleCompletionOn, isCompleted, toggleCompletion, getCompletionRate, getHistory }
 }
