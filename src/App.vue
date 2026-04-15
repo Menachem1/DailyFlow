@@ -1,6 +1,19 @@
 <template>
   <div id="app" dir="rtl">
     <router-view />
+
+    <!-- Install PWA banner (mobile only, before install) -->
+    <div v-if="showInstall" class="install-banner">
+      <div class="install-banner-text">
+        <strong>הוסף לבית</strong>
+        <span>פתח את DailyFlow כאפליקציה</span>
+      </div>
+      <div class="install-banner-actions">
+        <button class="install-btn" @click="install">התקן</button>
+        <button class="install-dismiss" @click="dismiss">✕</button>
+      </div>
+    </div>
+
     <nav class="bottom-nav">
       <router-link to="/" class="nav-item" active-class="active" exact>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -23,4 +36,38 @@
 </template>
 
 <script setup>
+import { ref, onMounted } from 'vue'
+
+const deferredPrompt = ref(null)
+const showInstall = ref(false)
+
+onMounted(() => {
+  // Only show on mobile devices
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+  if (!isMobile) return
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault()
+    deferredPrompt.value = e
+    showInstall.value = true
+  })
+
+  // Hide banner if already installed
+  window.addEventListener('appinstalled', () => {
+    showInstall.value = false
+    deferredPrompt.value = null
+  })
+})
+
+async function install() {
+  if (!deferredPrompt.value) return
+  deferredPrompt.value.prompt()
+  const { outcome } = await deferredPrompt.value.userChoice
+  if (outcome === 'accepted') showInstall.value = false
+  deferredPrompt.value = null
+}
+
+function dismiss() {
+  showInstall.value = false
+}
 </script>
