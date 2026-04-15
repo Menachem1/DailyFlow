@@ -26,8 +26,8 @@ const tasks = ref(load())
 const completions = ref(loadCompletions())
 
 export function useRecurringTasks() {
-  function addTask(title, days, time = null) {
-    tasks.value.push({ id: uuid(), title, days, time, createdAt: todayKey() })
+  function addTask(title, days, time = null, categoryId = null) {
+    tasks.value.push({ id: uuid(), title, days, time, categoryId, createdAt: todayKey() })
     save(tasks.value)
   }
 
@@ -36,9 +36,9 @@ export function useRecurringTasks() {
     save(tasks.value)
   }
 
-  function updateTask(id, title, days, time = null) {
+  function updateTask(id, title, days, time = null, categoryId = null) {
     const t = tasks.value.find(t => t.id === id)
-    if (t) { t.title = title; t.days = days; t.time = time; save(tasks.value) }
+    if (t) { t.title = title; t.days = days; t.time = time; t.categoryId = categoryId; save(tasks.value) }
   }
 
   function tasksForDate(date) {

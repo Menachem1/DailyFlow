@@ -953,6 +953,88 @@ body {
 }
 .install-dismiss:hover { background: rgba(255,255,255,0.35); }
 
+/* ===== Category Badge ===== */
+.category-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+.task-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* ===== Category chips (modal) ===== */
+.category-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.cat-chip {
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: all 0.15s;
+  background: var(--surface2);
+  color: var(--text-muted);
+  font-family: inherit;
+}
+.cat-chip:hover { opacity: 0.85; }
+.cat-chip.new-cat-btn {
+  background: none;
+  border: 1.5px dashed var(--border2);
+  color: var(--text-soft);
+}
+.cat-chip.new-cat-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+
+/* ===== New category inline form ===== */
+.new-cat-form {
+  margin-top: 12px;
+  padding: 14px;
+  background: var(--surface2);
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.color-swatches {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.color-swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2.5px solid transparent;
+  transition: transform 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+.color-swatch:hover { transform: scale(1.2); }
+.color-swatch.selected {
+  border-color: var(--text);
+  transform: scale(1.18);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
 /* ===== Responsive ===== */
 @media (min-width: 521px) {
   #app { box-shadow: 0 0 60px rgba(0,0,0,0.08); }

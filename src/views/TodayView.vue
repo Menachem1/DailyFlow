@@ -23,6 +23,7 @@
           :key="task.id"
           class="task-card"
           :class="{ completed: task.days ? task.completed : isCompletedOn(task.id, selectedKey) }"
+          :style="taskCardStyle(task.categoryId)"
           @click="task.days ? toggleOneTime(task.id) : toggleCompletionOn(task.id, selectedKey)"
         >
           <div class="task-check">
@@ -34,7 +35,10 @@
           </div>
           <div class="task-body">
             <span class="task-title">{{ task.title }}</span>
-            <span v-if="task.time" class="task-time">{{ task.time }}</span>
+            <div class="task-meta-row">
+              <span v-if="task.time" class="task-time">{{ task.time }}</span>
+              <span v-if="task.categoryId && getCategoryById(task.categoryId)" class="category-badge" :style="categoryStyle(task.categoryId)">{{ getCategoryById(task.categoryId).name }}</span>
+            </div>
           </div>
           <span class="task-badge recurring">קבוע</span>
         </div>
@@ -56,6 +60,7 @@
           v-for="task in openOneTime"
           :key="task.id"
           class="task-card"
+          :style="taskCardStyle(task.categoryId)"
         >
           <div class="task-check" @click="toggleOneTime(task.id)">
             <div class="checkbox">
@@ -63,8 +68,11 @@
           </div>
           <div class="task-body" @click="toggleOneTime(task.id)">
             <span class="task-title">{{ task.title }}</span>
-            <span v-if="task.time" class="task-time">{{ task.time }}</span>
-            <span v-if="task.dueDate && task.days" class="task-due">יעד: {{ formatDate(task.dueDate) }}</span>
+            <div class="task-meta-row">
+              <span v-if="task.time" class="task-time">{{ task.time }}</span>
+              <span v-if="task.dueDate && task.days" class="task-due">יעד: {{ formatDate(task.dueDate) }}</span>
+              <span v-if="task.categoryId && getCategoryById(task.categoryId)" class="category-badge" :style="categoryStyle(task.categoryId)">{{ getCategoryById(task.categoryId).name }}</span>
+            </div>
           </div>
           <button class="btn-icon danger" @click.stop="removeOneTime(task.id)">✕</button>
         </div>
@@ -82,6 +90,7 @@
           v-for="task in doneOneTime"
           :key="task.id"
           class="task-card completed"
+          :style="taskCardStyle(task.categoryId)"
         >
           <div class="task-check" @click="toggleOneTime(task.id)">
             <div class="checkbox checked">
@@ -127,10 +136,12 @@
 import { ref, computed } from 'vue'
 import { useRecurringTasks } from '../composables/useRecurringTasks.js'
 import { useOneTimeTasks } from '../composables/useOneTimeTasks.js'
+import { useCategories } from '../composables/useCategories.js'
 import AddTaskModal from '../components/AddTaskModal.vue'
 
 const { tasks: recurringSource, tasksForDate, isCompletedOn, toggleCompletionOn } = useRecurringTasks()
 const { addTask, toggleCompletion: toggleOneTime, removeTask: removeOneTime, tasks: allOneTime } = useOneTimeTasks()
+const { getCategoryById, categoryStyle, taskCardStyle } = useCategories()
 
 // ── date state ──────────────────────────────────────────────
 const offset = ref(0)
@@ -222,8 +233,8 @@ function formatDate(date) {
   return new Date(date).toLocaleDateString('he-IL', { day: 'numeric', month: 'short' })
 }
 
-function onAddOneTime({ title, description, dueDate, days, time }) {
-  addTask(title, description, dueDate || null, days, time)
+function onAddOneTime({ title, description, dueDate, days, time, categoryId }) {
+  addTask(title, description, dueDate || null, days, time, categoryId)
   showAddOne.value = false
 }
 
