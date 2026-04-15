@@ -1,41 +1,51 @@
 <template>
   <div class="view">
-    <header class="view-header">
-      <h1>יומן</h1>
+    <!-- Day navigator -->
+    <header class="day-nav-header">
+      <button class="nav-arrow" @click="shiftDay(-1)">&#8594;</button>
+      <div class="day-nav-center" @click="goToday">
+        <span class="day-nav-title">{{ dayLabel }}</span>
+        <span class="day-nav-sub">{{ isToday ? formattedDate : '' }}</span>
+        <span v-if="!isToday" class="go-today-hint">חזור להיום</span>
+      </div>
+      <button class="nav-arrow" @click="shiftDay(1)">&#8592;</button>
     </header>
 
-    <!-- Today's entry -->
+    <!-- Entry area -->
     <section class="section">
-      <h2 class="section-title">היום – {{ todayFormatted }}</h2>
+      <div class="journal-day-header">
+        <span class="journal-day-label">{{ isToday ? '' : formattedDate }}</span>
+        <span v-if="hasEntry" class="journal-entry-dot" title="יש רשומה ליום זה">●</span>
+        <button v-if="hasEntry" class="btn-icon danger" style="margin-right: auto" @click="deleteCurrentEntry" title="מחק רשומה">✕</button>
+      </div>
+
       <textarea
         class="journal-input"
-        v-model="todayText"
-        placeholder="כתוב כמה מילים על היום שלך..."
-        rows="5"
+        v-model="currentText"
+        :placeholder="isFuture ? 'כתוב הערות לתכנון היום...' : 'כתוב כמה מילים על היום שלך...'"
+        rows="7"
       ></textarea>
+
       <div class="journal-actions">
-        <span class="char-count">{{ todayText.length }} תווים</span>
-        <button class="btn-primary" @click="save" :disabled="!todayText.trim()">שמור</button>
+        <span class="char-count">{{ currentText.length }} תווים</span>
+        <button class="btn-primary" @click="saveNow" :disabled="!currentText.trim()">שמור</button>
       </div>
-      <div v-if="saved" class="saved-toast">✓ נשמר</div>
+      <div v-if="savedToast" class="saved-toast">✓ נשמר</div>
     </section>
 
-    <!-- Past entries -->
-    <section class="section" v-if="pastEntries.length > 0">
-      <h2 class="section-title">רשומות קודמות</h2>
+    <!-- Mini entry list for quick navigation -->
+    <section v-if="recentEntries.length > 0" class="section">
+      <h2 class="section-title">רשומות אחרונות</h2>
       <div
-        v-for="entry in pastEntries"
+        v-for="entry in recentEntries"
         :key="entry.date"
         class="journal-card"
-        @click="toggleExpand(entry.date)"
+        :class="{ 'journal-card-active': entry.date === selectedKey }"
+        @click="jumpToDate(entry.date)"
       >
         <div class="journal-card-header">
           <span class="journal-date">{{ formatDate(entry.date) }}</span>
-          <span class="journal-preview" v-if="expanded !== entry.date">{{ preview(entry.text) }}</span>
-          <button class="btn-icon danger" @click.stop="deleteEntry(entry.date)">✕</button>
-        </div>
-        <div v-if="expanded === entry.date" class="journal-full-text">
-          {{ entry.text }}
+          <span class="journal-preview">{{ preview(entry.text) }}</span>
         </div>
       </div>
     </section>
@@ -43,48 +53,100 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useJournal } from '../composables/useJournal.js'
 
-const { saveEntry, todayEntry, allEntries, deleteEntry: del, todayKey } = useJournal()
+const { saveEntry, getEntry, deleteEntry, allEntries, todayKey } = useJournal()
 
-const todayText = ref('')
-const saved = ref(false)
-const expanded = ref(null)
+// ── date navigation ──────────────────────────────────────────
+const offset = ref(0)
 
-onMounted(() => {
-  const entry = todayEntry()
-  if (entry) todayText.value = entry.text
-})
-
-const todayFormatted = computed(() =>
-  new Date().toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long' })
-)
-
-const pastEntries = computed(() =>
-  allEntries().filter(e => e.date !== todayKey())
-)
-
-function save() {
-  if (!todayText.value.trim()) return
-  saveEntry(todayText.value.trim())
-  saved.value = true
-  setTimeout(() => saved.value = false, 2000)
+function dateOf(off) {
+  const d = new Date()
+  d.setDate(d.getDate() + off)
+  return d
 }
 
+const selectedDate = computed(() => dateOf(offset.value))
+const selectedKey  = computed(() => selectedDate.value.toISOString().slice(0, 10))
+const isToday      = computed(() => offset.value === 0)
+const isYesterday  = computed(() => offset.value === -1)
+const isTomorrow   = computed(() => offset.value === 1)
+const isFuture     = computed(() => offset.value > 0)
+
+function shiftDay(delta) { offset.value += delta }
+function goToday()       { offset.value = 0 }
+
+function jumpToDate(dateKey) {
+  const today = new Date(todayKey())
+  const target = new Date(dateKey)
+  const diff = Math.round((target - today) / 86400000)
+  offset.value = diff
+}
+
+const formattedDate = computed(() =>
+  selectedDate.value.toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+)
+
+const dayLabel = computed(() => {
+  if (isToday.value)     return 'היום'
+  if (isTomorrow.value)  return 'מחר'
+  if (isYesterday.value) return 'אתמול'
+  return selectedDate.value.toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long' })
+})
+
+// ── entry state ──────────────────────────────────────────────
+const currentText = ref('')
+const savedToast  = ref(false)
+
+// Load entry when date changes; auto-save previous if dirty
+let prevKey  = null
+let prevText = ''
+
+watch(selectedKey, (newKey, oldKey) => {
+  // auto-save previous day if dirty
+  if (oldKey && prevText.trim() && prevText !== (getEntry(oldKey)?.text || '')) {
+    saveEntry(prevText.trim(), oldKey)
+  }
+  const entry = getEntry(newKey)
+  currentText.value = entry?.text || ''
+  prevKey  = newKey
+  prevText = currentText.value
+}, { immediate: true })
+
+// track text changes for auto-save-on-navigate
+watch(currentText, (val) => { prevText = val })
+
+const hasEntry = computed(() => !!getEntry(selectedKey.value))
+
+function saveNow() {
+  if (!currentText.value.trim()) return
+  saveEntry(currentText.value.trim(), selectedKey.value)
+  prevText = currentText.value.trim()
+  savedToast.value = true
+  setTimeout(() => savedToast.value = false, 2000)
+}
+
+function deleteCurrentEntry() {
+  if (confirm('למחוק את הרשומה הזו?')) {
+    deleteEntry(selectedKey.value)
+    currentText.value = ''
+    prevText = ''
+  }
+}
+
+// ── recent entries list ──────────────────────────────────────
 function formatDate(date) {
   return new Date(date).toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 }
 
 function preview(text) {
-  return text.length > 60 ? text.slice(0, 60) + '...' : text
+  return text.length > 55 ? text.slice(0, 55) + '...' : text
 }
 
-function toggleExpand(date) {
-  expanded.value = expanded.value === date ? null : date
-}
-
-function deleteEntry(date) {
-  if (confirm('למחוק את הרשומה הזו?')) del(date)
-}
+const recentEntries = computed(() =>
+  allEntries()
+    .filter(e => e.date !== selectedKey.value)
+    .slice(0, 5)
+)
 </script>

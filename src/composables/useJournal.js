@@ -16,8 +16,8 @@ export function useJournal() {
     return new Date().toISOString().slice(0, 10)
   }
 
-  function saveEntry(text) {
-    journal.value[todayKey()] = { text, updatedAt: new Date().toISOString() }
+  function saveEntry(text, date = todayKey()) {
+    journal.value[date] = { text, updatedAt: new Date().toISOString() }
     save(journal.value)
   }
 

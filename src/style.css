@@ -535,6 +535,31 @@ body {
   min-width: 0;
 }
 
+.journal-day-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  min-height: 24px;
+}
+
+.journal-day-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.journal-entry-dot {
+  font-size: 8px;
+  color: var(--primary);
+  line-height: 1;
+}
+
+.journal-card-active {
+  border-color: var(--primary) !important;
+  background: var(--primary-light) !important;
+}
+
 .journal-full-text {
   margin-top: 12px;
   font-size: 14px;
