@@ -22,12 +22,12 @@
           v-for="task in recurringTasks"
           :key="task.id"
           class="task-card"
-          :class="{ completed: isCompletedOn(task.id, selectedKey) }"
-          @click="toggleCompletionOn(task.id, selectedKey)"
+          :class="{ completed: task.days ? task.completed : isCompletedOn(task.id, selectedKey) }"
+          @click="task.days ? toggleOneTime(task.id) : toggleCompletionOn(task.id, selectedKey)"
         >
           <div class="task-check">
-            <div class="checkbox" :class="{ checked: isCompletedOn(task.id, selectedKey) }">
-              <svg v-if="isCompletedOn(task.id, selectedKey)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+            <div class="checkbox" :class="{ checked: task.days ? task.completed : isCompletedOn(task.id, selectedKey) }">
+              <svg v-if="task.days ? task.completed : isCompletedOn(task.id, selectedKey)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
                 <polyline points="20 6 9 17 4 12"/>
               </svg>
             </div>
@@ -126,7 +126,7 @@ import { useRecurringTasks } from '../composables/useRecurringTasks.js'
 import { useOneTimeTasks } from '../composables/useOneTimeTasks.js'
 import AddTaskModal from '../components/AddTaskModal.vue'
 
-const { tasksForDate, isCompletedOn, toggleCompletionOn } = useRecurringTasks()
+const { tasks: recurringSource, tasksForDate, isCompletedOn, toggleCompletionOn } = useRecurringTasks()
 const { addTask, toggleCompletion: toggleOneTime, removeTask: removeOneTime, tasks: allOneTime } = useOneTimeTasks()
 
 // ── date state ──────────────────────────────────────────────
@@ -153,29 +153,34 @@ const formattedDate = computed(() =>
 )
 
 // ── task filtering ───────────────────────────────────────────
-const recurringTasks = computed(() => tasksForDate(selectedDate.value))
 
-// Returns true if a task should appear on the selected day
-function taskBelongsToDay(t, key, dow) {
-  if (t.days) {
+// "קבועות" = tasks from useRecurringTasks + one-time tasks that have days set
+const recurringTasks = computed(() => {
+  const key = selectedKey.value
+  const dow = selectedDate.value.getDay()
+  const base = tasksForDate(selectedDate.value) // from useRecurringTasks
+
+  // one-time tasks with days → treat as recurring
+  const repeating = allOneTime.value.filter(t => {
+    if (!t.days) return false
     if (!t.days.includes(dow)) return false
     if (t.dueDate && key > t.dueDate) return false
+    if (t.completed) return t.completedAt === key
     return true
-  }
-  if (t.dueDate) return key === t.dueDate
-  // No date: floating task — always visible
-  return true
-}
+  })
 
+  return [...base, ...repeating]
+})
+
+// one-time tasks WITHOUT days
 const oneTimeTasks = computed(() => {
   const key = selectedKey.value
   const dow = selectedDate.value.getDay()
   return allOneTime.value.filter(t => {
-    if (t.completed) {
-      // Show completed tasks only on the day they were completed
-      return t.completedAt === key
-    }
-    return taskBelongsToDay(t, key, dow)
+    if (t.days) return false // handled in recurringTasks
+    if (t.completed) return t.completedAt === key
+    if (t.dueDate) return key === t.dueDate
+    return true // floating task — always visible
   })
 })
 
@@ -184,11 +189,14 @@ const doneOneTime = computed(() => oneTimeTasks.value.filter(t => t.completed))
 
 // ── progress ─────────────────────────────────────────────────
 const completedCount = computed(() => {
-  const rec = recurringTasks.value.filter(t => isCompletedOn(t.id, selectedKey.value)).length
+  const recIds = new Set(recurringSource.value.map(t => t.id))
+  const rec = recurringTasks.value.filter(t =>
+    recIds.has(t.id) ? isCompletedOn(t.id, selectedKey.value) : t.completed
+  ).length
   const one = doneOneTime.value.length
   return rec + one
 })
-const totalCount  = computed(() => recurringTasks.value.length + oneTimeTasks.value.length)
+const totalCount = computed(() => recurringTasks.value.length + oneTimeTasks.value.length)
 const progressPct = computed(() =>
   totalCount.value === 0 ? 0 : Math.round((completedCount.value / totalCount.value) * 100)
 )

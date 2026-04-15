@@ -10,16 +10,17 @@
       <button :class="{ active: tab === 'oneTime' }" @click="tab = 'oneTime'">חד-פעמיות</button>
     </div>
 
-    <!-- RECURRING TASKS TAB -->
+    <!-- RECURRING TAB -->
     <div v-if="tab === 'recurring'">
       <div class="section-header" style="padding: 0 0 12px">
-        <span class="section-title">{{ tasks.length }} משימות קבועות</span>
+        <span class="section-title">{{ allRecurring.length }} משימות קבועות</span>
         <button class="btn-add" @click="showAddRecurring = true">+ הוסף</button>
       </div>
-      <div v-if="tasks.length === 0" class="empty-state">
+      <div v-if="allRecurring.length === 0" class="empty-state">
         עדיין אין משימות קבועות.<br>לחץ "+ הוסף" כדי להתחיל.
       </div>
       <div class="task-list">
+        <!-- Pure recurring tasks (from useRecurringTasks) -->
         <div v-for="task in tasks" :key="task.id" class="task-card manage">
           <div class="task-body">
             <span class="task-title">{{ task.title }}</span>
@@ -31,10 +32,22 @@
             <button class="btn-icon danger" @click="removeTask(task.id)">✕</button>
           </div>
         </div>
+
+        <!-- One-time tasks with days (repeating) -->
+        <div v-for="task in repeatingOneTime" :key="task.id" class="task-card manage">
+          <div class="task-body">
+            <span class="task-title">{{ task.title }}</span>
+            <span class="task-days">{{ formatDays(task.days) }}</span>
+            <span v-if="task.dueDate" class="task-due">יעד: {{ task.dueDate }}</span>
+          </div>
+          <div class="task-actions">
+            <button class="btn-icon danger" @click="removeOneTime(task.id)">✕</button>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- ONE-TIME TASKS TAB -->
+    <!-- ONE-TIME TAB (only tasks WITHOUT days) -->
     <div v-if="tab === 'oneTime'">
       <div class="section-header" style="padding: 0 0 12px">
         <span class="section-title">{{ openTasks.length }} פתוחות</span>
@@ -55,7 +68,6 @@
             <span class="task-title">{{ task.title }}</span>
             <span v-if="task.description" class="task-desc">{{ task.description }}</span>
             <span v-if="task.dueDate" class="task-due">יעד: {{ task.dueDate }}</span>
-            <span v-if="task.days" class="task-days">{{ formatDays(task.days) }}</span>
           </div>
           <button class="btn-icon danger" @click="removeOneTime(task.id)">✕</button>
         </div>
@@ -118,7 +130,7 @@ import { useOneTimeTasks } from '../composables/useOneTimeTasks.js'
 import AddTaskModal from '../components/AddTaskModal.vue'
 
 const { tasks, addTask: addRecurring, removeTask, updateTask, getCompletionRate } = useRecurringTasks()
-const { addTask: addOneTime, removeTask: removeOneTime, toggleCompletion: toggleOneTime, open, done } = useOneTimeTasks()
+const { tasks: allOneTime, addTask: addOneTime, removeTask: removeOneTime, toggleCompletion: toggleOneTime } = useOneTimeTasks()
 
 const tab = ref('recurring')
 const showAddRecurring = ref(false)
@@ -126,8 +138,15 @@ const showAddOne = ref(false)
 const editingTask = ref(null)
 const showDone = ref(false)
 
-const openTasks = computed(() => open())
-const doneTasks = computed(() => done())
+// One-time tasks WITH days → shown in recurring tab
+const repeatingOneTime = computed(() => allOneTime.value.filter(t => t.days && !t.completed))
+
+// All recurring combined (for count)
+const allRecurring = computed(() => [...tasks.value, ...repeatingOneTime.value])
+
+// One-time tasks WITHOUT days → shown in one-time tab
+const openTasks  = computed(() => allOneTime.value.filter(t => !t.days && !t.completed))
+const doneTasks  = computed(() => allOneTime.value.filter(t => !t.days && t.completed))
 
 const DAY_NAMES = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳']
 function formatDays(days) {
