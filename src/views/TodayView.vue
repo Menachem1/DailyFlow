@@ -41,30 +41,54 @@
     <!-- One-time Tasks -->
     <section class="section">
       <div class="section-header">
-        <h2 class="section-title">משימות נוספות</h2>
+        <h2 class="section-title">משימות להיום</h2>
         <button class="btn-add" @click="showAddOne = true">+ הוסף</button>
       </div>
-      <div v-if="oneTimeTasks.length === 0" class="empty-state">
+      <div v-if="openOneTime.length === 0 && doneOneTime.length === 0" class="empty-state">
         אין משימות נוספות ליום זה
       </div>
       <div class="task-list">
+        <!-- Open tasks -->
         <div
-          v-for="task in oneTimeTasks"
+          v-for="task in openOneTime"
           :key="task.id"
           class="task-card"
-          :class="{ completed: task.completed }"
         >
           <div class="task-check" @click="toggleOneTime(task.id)">
-            <div class="checkbox" :class="{ checked: task.completed }">
-              <svg v-if="task.completed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
+            <div class="checkbox">
             </div>
           </div>
           <div class="task-body" @click="toggleOneTime(task.id)">
             <span class="task-title">{{ task.title }}</span>
             <span v-if="task.dueDate && task.days" class="task-due">יעד: {{ formatDate(task.dueDate) }}</span>
             <span v-if="task.days" class="task-days">{{ formatDays(task.days) }}</span>
+          </div>
+          <button class="btn-icon danger" @click.stop="removeOneTime(task.id)">✕</button>
+        </div>
+
+        <!-- Divider -->
+        <div v-if="openOneTime.length > 0 && doneOneTime.length > 0" class="done-divider">
+          <span>בוצע</span>
+        </div>
+        <div v-if="openOneTime.length === 0 && doneOneTime.length > 0" class="done-divider">
+          <span>בוצע</span>
+        </div>
+
+        <!-- Done tasks -->
+        <div
+          v-for="task in doneOneTime"
+          :key="task.id"
+          class="task-card completed"
+        >
+          <div class="task-check" @click="toggleOneTime(task.id)">
+            <div class="checkbox checked">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+          </div>
+          <div class="task-body" @click="toggleOneTime(task.id)">
+            <span class="task-title">{{ task.title }}</span>
           </div>
           <button class="btn-icon danger" @click.stop="removeOneTime(task.id)">✕</button>
         </div>
@@ -106,7 +130,7 @@ const { tasksForDate, isCompletedOn, toggleCompletionOn } = useRecurringTasks()
 const { addTask, toggleCompletion: toggleOneTime, removeTask: removeOneTime, tasks: allOneTime } = useOneTimeTasks()
 
 // ── date state ──────────────────────────────────────────────
-const offset = ref(0) // 0=today, -1=yesterday, +1=tomorrow
+const offset = ref(0)
 
 function dateOf(off) {
   const d = new Date()
@@ -116,15 +140,12 @@ function dateOf(off) {
 
 const selectedDate = computed(() => dateOf(offset.value))
 const selectedKey  = computed(() => selectedDate.value.toISOString().slice(0, 10))
-const todayKey     = computed(() => new Date().toISOString().slice(0, 10))
 
 const isToday     = computed(() => offset.value === 0)
 const isYesterday = computed(() => offset.value === -1)
 const isTomorrow  = computed(() => offset.value === 1)
 
-function shiftDay(delta) {
-  offset.value += delta
-}
+function shiftDay(delta) { offset.value += delta }
 function goToday() { offset.value = 0 }
 
 const formattedDate = computed(() =>
@@ -134,28 +155,37 @@ const formattedDate = computed(() =>
 // ── task filtering ───────────────────────────────────────────
 const recurringTasks = computed(() => tasksForDate(selectedDate.value))
 
+// Returns true if a task should appear on the selected day
+function taskBelongsToDay(t, key, dow) {
+  if (t.days) {
+    if (!t.days.includes(dow)) return false
+    if (t.dueDate && key > t.dueDate) return false
+    return true
+  }
+  if (t.dueDate) return key === t.dueDate
+  // No date: floating task — always visible
+  return true
+}
+
 const oneTimeTasks = computed(() => {
   const key = selectedKey.value
   const dow = selectedDate.value.getDay()
   return allOneTime.value.filter(t => {
-    if (t.completed) return false
-    if (t.days) {
-      // recurring one-time: show on matching days, respect dueDate if set
-      const dayMatch = t.days.includes(dow)
-      if (!dayMatch) return false
-      if (t.dueDate && key > t.dueDate) return false
-      return true
+    if (t.completed) {
+      // Show completed tasks only on the day they were completed
+      return t.completedAt === key
     }
-    // non-recurring: show only on its due date (or creation date if no due date)
-    const targetDate = t.dueDate || t.createdAt
-    return key === targetDate
+    return taskBelongsToDay(t, key, dow)
   })
 })
+
+const openOneTime = computed(() => oneTimeTasks.value.filter(t => !t.completed))
+const doneOneTime = computed(() => oneTimeTasks.value.filter(t => t.completed))
 
 // ── progress ─────────────────────────────────────────────────
 const completedCount = computed(() => {
   const rec = recurringTasks.value.filter(t => isCompletedOn(t.id, selectedKey.value)).length
-  const one = oneTimeTasks.value.filter(t => t.completed).length
+  const one = doneOneTime.value.length
   return rec + one
 })
 const totalCount  = computed(() => recurringTasks.value.length + oneTimeTasks.value.length)
@@ -174,8 +204,7 @@ function formatDate(date) {
 }
 
 function onAddOneTime({ title, description, dueDate, days }) {
-  // if no dueDate was set, default to the currently viewed date
-  addTask(title, description, dueDate || selectedKey.value, days)
+  addTask(title, description, dueDate || null, days)
   showAddOne.value = false
 }
 

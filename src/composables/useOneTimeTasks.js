@@ -15,10 +15,13 @@ function uuid() {
 const tasks = ref(load())
 
 export function useOneTimeTasks() {
-  function addTask(title, description = '', dueDate = '', days = null) {
+  function addTask(title, description = '', dueDate = null, days = null) {
     tasks.value.unshift({
-      id: uuid(), title, description, dueDate, days,
-      completed: false, createdAt: new Date().toISOString().slice(0, 10)
+      id: uuid(), title, description,
+      dueDate: dueDate || null,
+      days,
+      completed: false,
+      createdAt: new Date().toISOString().slice(0, 10)
     })
     save(tasks.value)
   }

@@ -844,6 +844,29 @@ body {
   border-radius: 50%;
 }
 
+/* ===== Done Divider ===== */
+.done-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0;
+}
+.done-divider::before,
+.done-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.done-divider span {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
 /* ===== PWA Install Banner ===== */
 .install-banner {
   position: fixed;
