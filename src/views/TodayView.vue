@@ -32,7 +32,10 @@
               </svg>
             </div>
           </div>
-          <span class="task-title">{{ task.title }}</span>
+          <div class="task-body">
+            <span class="task-title">{{ task.title }}</span>
+            <span v-if="task.time" class="task-time">{{ task.time }}</span>
+          </div>
           <span class="task-badge recurring">קבוע</span>
         </div>
       </div>
@@ -60,8 +63,8 @@
           </div>
           <div class="task-body" @click="toggleOneTime(task.id)">
             <span class="task-title">{{ task.title }}</span>
+            <span v-if="task.time" class="task-time">{{ task.time }}</span>
             <span v-if="task.dueDate && task.days" class="task-due">יעד: {{ formatDate(task.dueDate) }}</span>
-            <span v-if="task.days" class="task-days">{{ formatDays(task.days) }}</span>
           </div>
           <button class="btn-icon danger" @click.stop="removeOneTime(task.id)">✕</button>
         </div>
@@ -154,13 +157,21 @@ const formattedDate = computed(() =>
 
 // ── task filtering ───────────────────────────────────────────
 
+function sortByTime(arr) {
+  return [...arr].sort((a, b) => {
+    if (!a.time && !b.time) return 0
+    if (!a.time) return 1
+    if (!b.time) return -1
+    return a.time.localeCompare(b.time)
+  })
+}
+
 // "קבועות" = tasks from useRecurringTasks + one-time tasks that have days set
 const recurringTasks = computed(() => {
   const key = selectedKey.value
   const dow = selectedDate.value.getDay()
-  const base = tasksForDate(selectedDate.value) // from useRecurringTasks
+  const base = tasksForDate(selectedDate.value)
 
-  // one-time tasks with days → treat as recurring
   const repeating = allOneTime.value.filter(t => {
     if (!t.days) return false
     if (!t.days.includes(dow)) return false
@@ -169,7 +180,7 @@ const recurringTasks = computed(() => {
     return true
   })
 
-  return [...base, ...repeating]
+  return sortByTime([...base, ...repeating])
 })
 
 // one-time tasks WITHOUT days
@@ -211,8 +222,8 @@ function formatDate(date) {
   return new Date(date).toLocaleDateString('he-IL', { day: 'numeric', month: 'short' })
 }
 
-function onAddOneTime({ title, description, dueDate, days }) {
-  addTask(title, description, dueDate || null, days)
+function onAddOneTime({ title, description, dueDate, days, time }) {
+  addTask(title, description, dueDate || null, days, time)
   showAddOne.value = false
 }
 

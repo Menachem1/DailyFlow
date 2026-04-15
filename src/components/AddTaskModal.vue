@@ -16,7 +16,7 @@
           @keyup.enter="submit"
         />
 
-        <!-- Recurring: day picker -->
+        <!-- Recurring: day picker + time -->
         <template v-if="isRecurring">
           <label class="field-label" style="margin-top: 16px">ימים בשבוע</label>
           <div class="day-picker">
@@ -29,14 +29,26 @@
             >{{ name }}</button>
           </div>
           <button class="btn-text small" @click="selectAll">כל יום</button>
+
+          <label class="field-label" style="margin-top: 16px">שעה (אופציונלי)</label>
+          <input class="field-input" type="time" v-model="time" />
         </template>
 
-        <!-- One-time: description + due date + optional recurrence -->
+        <!-- One-time: description + due date + time + optional recurrence -->
         <template v-else>
           <label class="field-label" style="margin-top: 16px">תיאור (אופציונלי)</label>
           <input class="field-input" v-model="description" placeholder="פרטים נוספים..." />
-          <label class="field-label" style="margin-top: 16px">תאריך יעד (אופציונלי)</label>
-          <input class="field-input" type="date" v-model="dueDate" />
+
+          <div class="row-fields">
+            <div class="row-field">
+              <label class="field-label" style="margin-top: 16px">תאריך יעד (אופציונלי)</label>
+              <input class="field-input" type="date" v-model="dueDate" />
+            </div>
+            <div class="row-field">
+              <label class="field-label" style="margin-top: 16px">שעה (אופציונלי)</label>
+              <input class="field-input" type="time" v-model="time" />
+            </div>
+          </div>
 
           <div class="repeat-toggle" style="margin-top: 16px">
             <label class="toggle-label">
@@ -72,7 +84,7 @@
 import { ref, computed } from 'vue'
 
 const props = defineProps({
-  type: { type: String, default: 'recurring' }, // 'recurring' | 'oneTime'
+  type: { type: String, default: 'recurring' },
   initial: { type: Object, default: null }
 })
 const emit = defineEmits(['save', 'close'])
@@ -80,11 +92,12 @@ const emit = defineEmits(['save', 'close'])
 const DAY_NAMES = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳']
 const isRecurring = computed(() => props.type === 'recurring')
 
-const title = ref(props.initial?.title || '')
+const title       = ref(props.initial?.title || '')
 const selectedDays = ref(props.initial?.days ? [...props.initial.days] : [0, 1, 2, 3, 4, 5, 6])
 const description = ref(props.initial?.description || '')
-const dueDate = ref(props.initial?.dueDate || '')
-const hasRepeat = ref(!!(props.initial?.days && !isRecurring.value))
+const dueDate     = ref(props.initial?.dueDate || '')
+const time        = ref(props.initial?.time || '')
+const hasRepeat   = ref(!!(props.initial?.days && !isRecurring.value))
 
 const canSubmit = computed(() => {
   if (!title.value.trim()) return false
@@ -106,12 +119,13 @@ function selectAll() {
 function submit() {
   if (!canSubmit.value) return
   if (isRecurring.value) {
-    emit('save', { title: title.value.trim(), days: selectedDays.value })
+    emit('save', { title: title.value.trim(), days: selectedDays.value, time: time.value || null })
   } else {
     emit('save', {
       title: title.value.trim(),
       description: description.value.trim(),
-      dueDate: dueDate.value,
+      dueDate: dueDate.value || null,
+      time: time.value || null,
       days: hasRepeat.value ? selectedDays.value : null
     })
   }

@@ -24,7 +24,7 @@
         <div v-for="task in tasks" :key="task.id" class="task-card manage">
           <div class="task-body">
             <span class="task-title">{{ task.title }}</span>
-            <span class="task-days">{{ formatDays(task.days) }}</span>
+            <span class="task-days">{{ formatDays(task.days) }}<span v-if="task.time"> · {{ task.time }}</span></span>
           </div>
           <div class="task-actions">
             <span class="rate-badge">{{ getCompletionRate(task.id) }}%</span>
@@ -37,7 +37,7 @@
         <div v-for="task in repeatingOneTime" :key="task.id" class="task-card manage">
           <div class="task-body">
             <span class="task-title">{{ task.title }}</span>
-            <span class="task-days">{{ formatDays(task.days) }}</span>
+            <span class="task-days">{{ formatDays(task.days) }}<span v-if="task.time"> · {{ task.time }}</span></span>
             <span v-if="task.dueDate" class="task-due">יעד: {{ task.dueDate }}</span>
           </div>
           <div class="task-actions">
@@ -158,18 +158,18 @@ function startEdit(task) {
   editingTask.value = { ...task }
 }
 
-function onAddRecurring({ title, days }) {
-  addRecurring(title, days)
+function onAddRecurring({ title, days, time }) {
+  addRecurring(title, days, time)
   showAddRecurring.value = false
 }
 
-function onEditRecurring({ title, days }) {
-  updateTask(editingTask.value.id, title, days)
+function onEditRecurring({ title, days, time }) {
+  updateTask(editingTask.value.id, title, days, time)
   editingTask.value = null
 }
 
-function onAddOneTime({ title, description, dueDate, days }) {
-  addOneTime(title, description, dueDate, days)
+function onAddOneTime({ title, description, dueDate, days, time }) {
+  addOneTime(title, description, dueDate, days, time)
   showAddOne.value = false
 }
 </script>
