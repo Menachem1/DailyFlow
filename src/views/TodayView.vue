@@ -29,14 +29,14 @@
         <template #item="{ element: task }">
           <div
             class="task-card"
-            :class="{ completed: task.days ? task.completed : isCompletedOn(task.id, selectedKey) }"
+            :class="{ completed: task.days ? isOneTimeCompletedOn(task.id, selectedKey) : isCompletedOn(task.id, selectedKey) }"
             :style="taskCardStyle(task.categoryId)"
-            @click="task.days ? toggleOneTime(task.id) : toggleCompletionOn(task.id, selectedKey)"
+            @click="task.days ? toggleOneTimeCompletionOn(task.id, selectedKey) : toggleCompletionOn(task.id, selectedKey)"
           >
             <span class="drag-handle" @click.stop><DragIcon /></span>
             <div class="task-check">
-              <div class="checkbox" :class="{ checked: task.days ? task.completed : isCompletedOn(task.id, selectedKey) }">
-                <svg v-if="task.days ? task.completed : isCompletedOn(task.id, selectedKey)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+              <div class="checkbox" :class="{ checked: task.days ? isOneTimeCompletedOn(task.id, selectedKey) : isCompletedOn(task.id, selectedKey) }">
+                <svg v-if="task.days ? isOneTimeCompletedOn(task.id, selectedKey) : isCompletedOn(task.id, selectedKey)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
                   <polyline points="20 6 9 17 4 12"/>
                 </svg>
               </div>
@@ -161,7 +161,7 @@ const DragIcon = {
   </svg>`
 }
 
-const { tasks: recurringSource, tasksForDate, isCompletedOn, toggleCompletionOn } = useRecurringTasks()
+const { tasks: recurringSource, tasksForDate, isCompletedOn, toggleCompletionOn, isOneTimeCompletedOn, toggleOneTimeCompletionOn } = useRecurringTasks()
 const { addTask, toggleCompletion: toggleOneTime, removeTask: removeOneTime, tasks: allOneTime } = useOneTimeTasks()
 const { getCategoryById, categoryStyle, taskCardStyle } = useCategories()
 const { setDayOrder, applyOrder } = useDayOrder()
@@ -207,7 +207,6 @@ const recurringTasksBase = computed(() => {
     if (!t.days) return false
     if (!t.days.includes(dow)) return false
     if (t.dueDate && key > t.dueDate) return false
-    if (t.completed) return t.completedAt === key
     return true
   })
   return sortByTime([...base, ...repeating])
@@ -259,7 +258,9 @@ function onOneTimeReorder() {
 const completedCount = computed(() => {
   const recIds = new Set(recurringSource.value.map(t => t.id))
   const rec = recurringList.value.filter(t =>
-    recIds.has(t.id) ? isCompletedOn(t.id, selectedKey.value) : t.completed
+    recIds.has(t.id)
+      ? isCompletedOn(t.id, selectedKey.value)
+      : isOneTimeCompletedOn(t.id, selectedKey.value)
   ).length
   return rec + doneOneTime.value.length
 })

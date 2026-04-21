@@ -65,6 +65,20 @@ export function useRecurringTasks() {
     saveCompletions(completions.value)
   }
 
+  function isOneTimeCompletedOn(taskId, dateKey) {
+    return (completions.value[dateKey]?.oneTime || []).includes(taskId)
+  }
+
+  function toggleOneTimeCompletionOn(taskId, dateKey) {
+    if (!completions.value[dateKey]) completions.value[dateKey] = { recurring: [], oneTime: [] }
+    if (!completions.value[dateKey].oneTime) completions.value[dateKey].oneTime = []
+    const list = completions.value[dateKey].oneTime
+    const idx = list.indexOf(taskId)
+    if (idx === -1) list.push(taskId)
+    else list.splice(idx, 1)
+    saveCompletions(completions.value)
+  }
+
   // keep old names for history/stats that still use "today"
   function isCompleted(taskId) { return isCompletedOn(taskId, todayKey()) }
   function toggleCompletion(taskId) { return toggleCompletionOn(taskId, todayKey()) }
@@ -99,5 +113,5 @@ export function useRecurringTasks() {
     return result
   }
 
-  return { tasks, addTask, removeTask, updateTask, setTasksOrder, tasksForDate, isCompletedOn, toggleCompletionOn, isCompleted, toggleCompletion, getCompletionRate, getHistory }
+  return { tasks, addTask, removeTask, updateTask, setTasksOrder, tasksForDate, isCompletedOn, toggleCompletionOn, isOneTimeCompletedOn, toggleOneTimeCompletionOn, isCompleted, toggleCompletion, getCompletionRate, getHistory }
 }
